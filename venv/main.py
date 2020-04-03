@@ -48,7 +48,7 @@ while True:
         #Suche nach Hersteller + Modell
         make = 'BMW'
         model = '120'
-        for page in range(1, 21):
+        for page in range(1, 2):
             try:
                 url = 'https://www.autoscout24.de/lst/'+make+'/' + model +'?sort=age&desc=1&ustate=N%2CU&size=5&page=' + str(page) + '&cy=' + countries[country] + '&atype=C&'
                 only_a_tags = SoupStrainer("a")

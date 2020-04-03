@@ -6,11 +6,14 @@ from datetime import datetime  # um den Daten Timestamps zu geben
 import re  # regular expressions
 import os  # Dateipfade erstellen und lesen
 import pandas as pd  # Datenanalyse und -manipulation
+from pathlib import Path
 
-folders = ["out/data/visited/", "out/data/autos/"]
+
+
+folders = [Path("out/data/visited/"), Path("out/data/autos/")]
 for folder in folders:
     if not os.path.isdir(folder):
-        os.mkdir(folder)
+        os.makedirs(folder)
         print(folder, "erstellt.")
     else:
         print(folder, "existiert bereits")

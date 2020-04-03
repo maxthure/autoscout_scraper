@@ -31,7 +31,8 @@ car_counter = 1
 cycle_counter = 0
 filterset = {"Zustand", "Region", "Bilder",
              "Serviceleistungen", "Spezielle Umbauten", "Modellvarianten", "Fahrzeugbeschreibung",
-             "KraftstoffverbrauchWeitere Informationen zum offiziellen Kraftstoffverbrauch und den offiziellen spezifischen CO2-Emissionen neuer Personenkraftwagen können dem \"Leitfaden über den Kraftstoffverbrauch, die CO2-Emissionen und den Stromverbrauch neuer Personenkraftwagen\" entnommen werden, der an allen Verkaufsstellen und bei der Deutschen Automobil Treuhand GmbH unter\xa0www.dat.de\xa0unentgeltlich erhältlich ist.': '6,3 l/100 km (komb)8,4 l/100 km (innerorts)5,4 l/100 km (außerorts)"}
+             "KraftstoffverbrauchWeitere Informationen zum offiziellen Kraftstoffverbrauch und den offiziellen spezifischen CO2-Emissionen neuer Personenkraftwagen können dem \"Leitfaden über den Kraftstoffverbrauch, die CO2-Emissionen und den Stromverbrauch neuer Personenkraftwagen\" entnommen werden, der an allen Verkaufsstellen und bei der Deutschen Automobil Treuhand GmbH unter\xa0www.dat.de\xa0unentgeltlich erhältlich ist.",
+             "CO2-EmissionenWeitere Informationen zum offiziellen Kraftstoffverbrauch und den offiziellen spezifischen CO2-Emissionen neuer Personenkraftwagen können dem \"Leitfaden über den Kraftstoffverbrauch, die CO2-Emissionen und den Stromverbrauch neuer Personenkraftwagen\" entnommen werden, der an allen Verkaufsstellen und bei der Deutschen Automobil Treuhand GmbH unter\xa0www.dat.de\xa0unentgeltlich erhältlich ist."}
 while True:
     with open(path_to_visited_urls) as file:
         visited_urls = json.load(file)

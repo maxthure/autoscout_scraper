@@ -6,3 +6,4 @@ venv/out/data/autos
 venv/out/data/visited
 .idea
 venv/pyvenv.cfg
+scraped.sqlite

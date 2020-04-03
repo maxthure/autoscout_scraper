@@ -114,6 +114,7 @@ while True:
                   index_label="url")
         try:
             engine = sqlalchemy.create_engine('sqlite:///scraped.sqlite')
+            df.columns = df.columns.str.strip().str.lower().str.replace(' ', '_').str.replace('(', '').str.replace(')','')
             df.to_sql('autos',engine, None, 'replace', True, None, None, None, None)
             print("DataFrame saved in DB")
         except Exception as error:

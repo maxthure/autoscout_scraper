@@ -7,3 +7,4 @@ venv/out/data/visited
 .idea
 venv/pyvenv.cfg
 scraped.sqlite
+scraped.sqlite.txt

@@ -84,8 +84,7 @@ while True:
                     car_dict["ort"] = car.find("div", attrs={"class": "sc-grid-col-12",
                                                              "data-item-name": "vendor-contact-city"}).text
 
-                    car_dict["price"] = "".join(
-                        re.findall(r'[0-9]+', car.find("div", attrs={"class": "cldt-price"}).text))
+                    car_dict["price"] = "".join(re.findall(r'[0-9]+', car.find("div", attrs={"class": "cldt-price"}).text))
 
                     ausstattung = []
                     for i in car.find_all("div", attrs={
@@ -96,7 +95,7 @@ while True:
                     for element in list(set(ausstattung)):
                         austattung_liste = element.split("\n")
                         ausstattung2.extend(austattung_liste)
-                    car_dict["ausstattung_liste"] = sorted(list(set(ausstattung2)))
+                    #car_dict["ausstattung_liste"] = sorted(list(set(ausstattung2)))
                     multiple_cars_dict[URL] = car_dict
                     visited_urls.append(URL)
                     print(car_dict)
@@ -115,11 +114,9 @@ while True:
                   index_label="url")
         try:
             engine = sqlalchemy.create_engine('sqlite:///scraped.sqlite')
-            df.to_sql(name='autos',con=engine, schema=None, if_exists='replace', index=True, index_label=None, chunksize=None, dtype={'price':sqlalchemy.types.INTEGER,
-                                                                                                                                      'ausstattung_liste':sqlalchemy.types.ARRAY}, method=None)
+            df.to_sql('autos',engine, None, 'replace', True, None, None, None, None)
             print("DataFrame saved in DB")
         except Exception as error:
-            print(error.__cause__)
             print("Error while connecting to sqlite: ", error)
 
     else:

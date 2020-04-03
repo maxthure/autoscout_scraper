@@ -11,6 +11,7 @@ import sqlalchemy
 
 
 folders = [Path("out/data/visited/"), Path("out/data/autos/")]
+
 for folder in folders:
     if not os.path.isdir(folder):
         os.makedirs(folder)
@@ -44,10 +45,12 @@ while True:
 
         car_URLs = []
         car_URLs_unique = []
-
-        for page in range(1, 2):
+        #Suche nach Hersteller + Modell
+        make = 'BMW'
+        model = '120'
+        for page in range(1, 21):
             try:
-                url = 'https://www.autoscout24.de/lst/?sort=age&desc=1&ustate=N%2CU&size=5&page=' + str(page) + '&cy=' + countries[country] + '&atype=C&'
+                url = 'https://www.autoscout24.de/lst/'+make+'/' + model +'?sort=age&desc=1&ustate=N%2CU&size=5&page=' + str(page) + '&cy=' + countries[country] + '&atype=C&'
                 only_a_tags = SoupStrainer("a")
                 soup = BeautifulSoup(urllib.request.urlopen(url).read(), 'lxml', parse_only=only_a_tags)
                 for link in soup.find_all("a"):

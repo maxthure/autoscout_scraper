@@ -29,10 +29,11 @@ countries = {"Deutschland": "D"}
 
 car_counter = 1
 cycle_counter = 0
-filterset = {"Zustand", "Region", "Bilder",
-             "Serviceleistungen", "Spezielle Umbauten", "Modellvarianten", "Fahrzeugbeschreibung",
-             "KraftstoffverbrauchWeitere Informationen zum offiziellen Kraftstoffverbrauch und den offiziellen spezifischen CO2-Emissionen neuer Personenkraftwagen können dem \"Leitfaden über den Kraftstoffverbrauch, die CO2-Emissionen und den Stromverbrauch neuer Personenkraftwagen\" entnommen werden, der an allen Verkaufsstellen und bei der Deutschen Automobil Treuhand GmbH unter\xa0www.dat.de\xa0unentgeltlich erhältlich ist.",
-             "CO2-EmissionenWeitere Informationen zum offiziellen Kraftstoffverbrauch und den offiziellen spezifischen CO2-Emissionen neuer Personenkraftwagen können dem \"Leitfaden über den Kraftstoffverbrauch, die CO2-Emissionen und den Stromverbrauch neuer Personenkraftwagen\" entnommen werden, der an allen Verkaufsstellen und bei der Deutschen Automobil Treuhand GmbH unter\xa0www.dat.de\xa0unentgeltlich erhältlich ist."}
+filterset = {"url", "country", "date", "Fahrzeughalter", "HU/AU neu", "Garantie", "Scheckheftgepflegt",
+             "Nichtraucherfahrzeug", "Marke", "Modell", "Angebotsnummer", "Erstzulassung",
+             "Außenfarbe", "Lackierung", "Farbe laut Hersteller", "Innenausstattung", "Karosserieform", "Anzahl Türen", "Sitzplätze",
+             "Schlüsselnummer", "Getriebeart", "Hubraum", "Anstriebsart", "Kraftstoff", "Feinstaubplakette", "Leistung",
+             "Kilometerstand", "Getriebe", "Verkäufer", "Kraftstoffverbr.*", "Ausstattung", "ort", "price"}
 while True:
     with open(path_to_visited_urls) as file:
         visited_urls = json.load(file)
@@ -80,12 +81,10 @@ while True:
 
                     for key, value in zip(car.find_all("dt"), car.find_all("dd")):
                        # print(key)
-                        if key.text.replace("\n", "") not in filterset:
+                        if key.text.replace("\n", "") in filterset:
                             car_dict[key.text.replace("\n", "")] = value.text.replace("\n", "")
                     car_dict["haendler"] = car.find("div", attrs={"class": "cldt-vendor-contact-box",
                                                                   "data-vendor-type": "dealer"}) != None
-                    car_dict["privat"] = car.find("div", attrs={"class": "cldt-vendor-contact-box",
-                                                                "data-vendor-type": "privateseller"}) != None
                     car_dict["ort"] = car.find("div", attrs={"class": "sc-grid-col-12",
                                                              "data-item-name": "vendor-contact-city"}).text
 

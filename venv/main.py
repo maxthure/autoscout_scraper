@@ -29,7 +29,9 @@ countries = {"Deutschland": "D"}
 
 car_counter = 1
 cycle_counter = 0
-
+filterset = {"Zustand", "Region", "Bilder",
+             "Serviceleistungen", "Spezielle Umbauten", "Modellvarianten", "Fahrzeugbeschreibung",
+             "KraftstoffverbrauchWeitere Informationen zum offiziellen Kraftstoffverbrauch und den offiziellen spezifischen CO2-Emissionen neuer Personenkraftwagen können dem \"Leitfaden über den Kraftstoffverbrauch, die CO2-Emissionen und den Stromverbrauch neuer Personenkraftwagen\" entnommen werden, der an allen Verkaufsstellen und bei der Deutschen Automobil Treuhand GmbH unter\xa0www.dat.de\xa0unentgeltlich erhältlich ist.': '6,3 l/100 km (komb)8,4 l/100 km (innerorts)5,4 l/100 km (außerorts)"}
 while True:
     with open(path_to_visited_urls) as file:
         visited_urls = json.load(file)
@@ -76,7 +78,9 @@ while True:
                     car = BeautifulSoup(urllib.request.urlopen('https://www.autoscout24.de' + URL).read(), 'lxml')
 
                     for key, value in zip(car.find_all("dt"), car.find_all("dd")):
-                        car_dict[key.text.replace("\n", "")] = value.text.replace("\n", "")
+                       # print(key)
+                        if key.text.replace("\n", "") not in filterset:
+                            car_dict[key.text.replace("\n", "")] = value.text.replace("\n", "")
                     car_dict["haendler"] = car.find("div", attrs={"class": "cldt-vendor-contact-box",
                                                                   "data-vendor-type": "dealer"}) != None
                     car_dict["privat"] = car.find("div", attrs={"class": "cldt-vendor-contact-box",

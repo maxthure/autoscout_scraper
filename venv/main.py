@@ -47,6 +47,98 @@ def scrape_autoscout():
                  "Schlüsselnummer", "Getriebeart", "Hubraum", "Anstriebsart", "Kraftstoff", "Schadstoffklasse",
                  "Feinstaubplakette", "Leistung",
                  "Kilometerstand", "Getriebe", "Kraftstoffverbr.*", "Ausstattung", "ort", "price", "HU Prüfung"}
+    ausstattungsset = {"ABS",
+                       "Airbag hinten",
+                       "Alarmanlage",
+                       "Beifahrerairbag",
+                       "ESP",
+                       "Fahrerairbag",
+                       "Isofix",
+                       "Kopfairbag",
+                       "Kurvenlicht",
+                       "LED-Scheinwerfer",
+                       "LED-Tagfahrlicht",
+                       "Müdigkeitswarnsystem",
+                       "Nachtsicht-Assistent",
+                       "Nebelscheinwerfer",
+                       "Notbremsassistent",
+                       "Notrufsystem",
+                       "Reifendruckkontrollsystem",
+                       "Schlüssellose Zentralverriegelung",
+                       "Seitenairbag",
+                       "Spurhalteassistent",
+                       "Tagfahrlicht",
+                       "Totwinkel-Assistent",
+                       "Verkehrszeichenerkennung",
+                       "Wegfahrsperre",
+                       "Xenonscheinwerfer",
+                       "Zentralverriegelung",
+                       "Zentralverriegelung mit Funkfernbedienung",
+                       "Abstandstempomat",
+                       "Armlehne",
+                       "Beheizbare Frontscheibe",
+                       "Beheizbares Lenkrad",
+                       "Berganfahrassistent",
+                       "Einparkhilfe Kamera",
+                       "Einparkhilfe selbstlenkendes System",
+                       "Einparkhilfe Sensoren hinten",
+                       "Einparkhilfe Sensoren vorne",
+                       "Elektr. Fensterheber",
+                       "Elektrische Heckklappe",
+                       "Elektrische Seitenspiegel",
+                       "Elektrische Sitze",
+                       "Head-up display",
+                       "Klimaanlage",
+                       "Klimaautomatik",
+                       "Lederlenkrad",
+                       "Lichtsensor",
+                       "Lordosenstütze",
+                       "Luftfederung",
+                       "Massagesitze",
+                       "Panoramadach",
+                       "Regensensor",
+                       "Schaltwippen",
+                       "Schiebedach",
+                       "Schiebetür",
+                       "Servolenkung",
+                       "Sitzbelüftung",
+                       "Sitzheizung",
+                       "Standheizung",
+                       "Start/Stop-Automatik",
+                       "teilb. Rücksitzbank",
+                       "Tempomat",
+                       "Bluetooth",
+                       "Bordcomputer",
+                       "CD",
+                       "DAB-Radio",
+                       "Freisprecheinrichtung",
+                       "MP3",
+                       "Multifunktionslenkrad",
+                       "Navigationssystem",
+                       "Radio",
+                       "Soundsystem",
+                       "Sprachsteuerung",
+                       "Touchscreen",
+                       "TV",
+                       "USB",
+                       "Alufelgen",
+                       "Anhängerkupplung",
+                       "Behindertengerecht",
+                       "Dachreling",
+                       "Garantie",
+                       "Getönte",
+                       "Scheiben",
+                       "Katalysator",
+                       "Rechtslenker",
+                       "Skisack",
+                       "Sportfahrwerk",
+                       "Sportpaket",
+                       "Sportsitze",
+                       "Traktionskontrolle",
+                       "Tuning",
+                       "Windschott(für Cabrio)",
+                       "Winterreifen"
+                       }
 
     with open(path_to_visited_urls) as file:
         visited_urls = json.load(file)
@@ -113,7 +205,11 @@ def scrape_autoscout():
                     for element in list(set(ausstattung)):
                         austattung_liste = element.split("\n")
                         ausstattung2.extend(austattung_liste)
-                    # car_dict["ausstattung_liste"] = sorted(list(set(ausstattung2)))
+                    for ausstattung_element in ausstattungsset:
+                        if ausstattung_element in ausstattung2:
+                            car_dict[ausstattung_element] = True
+                        else:
+                            car_dict[ausstattung_element] = False
                     multiple_cars_dict[URL] = car_dict
                     visited_urls.append(URL)
                     print(car_dict)
@@ -127,7 +223,7 @@ def scrape_autoscout():
             sleep(60)
 
     with open("out/data/visited/visited_urls.json", "w") as file:
-            json.dump(visited_urls, file)
+        json.dump(visited_urls, file)
     return multiple_cars_dict
 
 

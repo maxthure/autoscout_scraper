@@ -50,6 +50,8 @@ def get_visited_urls(engine):
         return visited_urls
     except Exception as error:
         print("Error while connecting to sqlite: ", error)
+    finally:
+        connection.close()
 
 
 def scrape_autoscout(visited_urls):

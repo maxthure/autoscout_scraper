@@ -32,8 +32,8 @@ cycle_counter = 0
 filterset = {"url", "country", "date", "Fahrzeughalter", "HU/AU neu", "Garantie", "Scheckheftgepflegt",
              "Nichtraucherfahrzeug", "Marke", "Modell", "Angebotsnummer", "Erstzulassung",
              "Außenfarbe", "Lackierung", "Farbe laut Hersteller", "Innenausstattung", "Karosserieform", "Anzahl Türen", "Sitzplätze",
-             "Schlüsselnummer", "Getriebeart", "Hubraum", "Anstriebsart", "Kraftstoff", "Feinstaubplakette", "Leistung",
-             "Kilometerstand", "Getriebe", "Verkäufer", "Kraftstoffverbr.*", "Ausstattung", "ort", "price"}
+             "Schlüsselnummer", "Getriebeart", "Hubraum", "Anstriebsart", "Kraftstoff", "Schadstoffklasse","Feinstaubplakette", "Leistung",
+             "Kilometerstand", "Getriebe", "Kraftstoffverbr.*", "Ausstattung", "ort", "price", "HU Prüfung"}
 while True:
     with open(path_to_visited_urls) as file:
         visited_urls = json.load(file)
@@ -54,7 +54,8 @@ while True:
         model = '120'
         for page in range(1, 2):
             try:
-                url = 'https://www.autoscout24.de/lst/'+make+'/' + model +'?sort=age&desc=1&ustate=N%2CU&size=5&page=' + str(page) + '&cy=' + countries[country] + '&atype=C&'
+                url = 'https://www.autoscout24.de/lst/'+make+'/' + model +'?sort=age&desc=1&ustate=N%2CU&size=20&page=' \
+                      + str(page) + '&cy=' + countries[country] + '&atype=C&'
                 only_a_tags = SoupStrainer("a")
                 soup = BeautifulSoup(urllib.request.urlopen(url).read(), 'lxml', parse_only=only_a_tags)
                 for link in soup.find_all("a"):
@@ -88,7 +89,8 @@ while True:
                     car_dict["ort"] = car.find("div", attrs={"class": "sc-grid-col-12",
                                                              "data-item-name": "vendor-contact-city"}).text
 
-                    car_dict["price"] = "".join(re.findall(r'[0-9]+', car.find("div", attrs={"class": "cldt-price"}).text))
+                    car_dict["price"] =\
+                        "".join(re.findall(r'[0-9]+', car.find("div", attrs={"class": "cldt-price"}).text))
 
                     ausstattung = []
                     for i in car.find_all("div", attrs={

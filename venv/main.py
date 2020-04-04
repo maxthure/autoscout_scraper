@@ -9,33 +9,50 @@ import pandas as pd  # Datenanalyse und -manipulation
 from pathlib import Path
 import sqlalchemy
 
-folders = [Path("out/data/visited/"), Path("out/data/autos/")]
+car_folder = Path("out/data/autos/")
 path_to_visited_urls = "out/data/visited/visited_urls.json"
 
 
 def main():
-    create_folders()
-    create_path_to_visited_urls()
-    multiple_cars_dict = scrape_autoscout()
-    save_cars(multiple_cars_dict)
+    create_folder()
+    engine = create_engine_to_db()
+    visited_urls = get_visited_urls(engine)
+    multiple_cars_dict = scrape_autoscout(visited_urls)
+    save_cars(multiple_cars_dict, engine)
 
 
-def create_folders():
-    for folder in folders:
-        if not os.path.isdir(folder):
-            os.makedirs(folder)
-            print(folder, "erstellt.")
-        else:
-            print(folder, "existiert bereits")
+def create_folder():
+    if not os.path.isdir(car_folder):
+        os.makedirs(car_folder)
+        print(car_folder, "erstellt.")
+    else:
+        print(car_folder, "existiert bereits")
 
 
-def create_path_to_visited_urls():
-    if not os.path.isfile(path_to_visited_urls):
-        with open(path_to_visited_urls, "w") as file:
-            json.dump([], file)
+def create_engine_to_db():
+    try:
+        engine = sqlalchemy.create_engine('sqlite:///scraped.sqlite')
+        return engine
+    except Exception as error:
+        print("Error while connecting to sqlite: ", error)
 
 
-def scrape_autoscout():
+def get_visited_urls(engine):
+    try:
+        connection = engine.connect()
+        metadata = sqlalchemy.MetaData()
+        autos = sqlalchemy.Table('autos', metadata, autoload=True, autoload_with=engine)
+        query = sqlalchemy.select([autos.columns.url])
+        result_proxy = connection.execute(query)
+        result_set = result_proxy.fetchall()
+        visited_urls = [r[0] for r in result_set]
+        print(f'Länge der Liste besuchter URLs: {len(visited_urls)}')
+        return visited_urls
+    except Exception as error:
+        print("Error while connecting to sqlite: ", error)
+
+
+def scrape_autoscout(visited_urls):
     countries = {"Deutschland": "D"}
 
     car_counter = 1
@@ -140,12 +157,6 @@ def scrape_autoscout():
                        "Winterreifen"
                        }
 
-    with open(path_to_visited_urls) as file:
-        visited_urls = json.load(file)
-
-    if len(visited_urls) > 100000:
-        visited_urls = []
-
     multiple_cars_dict = {}
 
     cycle_counter += 1
@@ -211,32 +222,24 @@ def scrape_autoscout():
                         else:
                             car_dict[ausstattung_element] = False
                     multiple_cars_dict[URL] = car_dict
-                    visited_urls.append(URL)
                     print(car_dict)
                 except Exception as e:
                     print("Detailseite: " + str(e) + " " * 50)
                     pass
             print("")
 
-        else:
-            print("\U0001F634")
-            sleep(60)
-
-    with open("out/data/visited/visited_urls.json", "w") as file:
-        json.dump(visited_urls, file)
     return multiple_cars_dict
 
 
-def save_cars(multiple_cars_dict):
+def save_cars(multiple_cars_dict, engine):
     if len(multiple_cars_dict) > 0:
         df = pd.DataFrame(multiple_cars_dict).T
         df.to_csv("out/data/autos/" + re.sub("[.,:,-, ]", "_", str(datetime.now())) + ".csv", sep=";",
                   index_label="url")
         try:
-            engine = sqlalchemy.create_engine('sqlite:///scraped.sqlite')
             df.columns = df.columns.str.strip().str.lower().str.replace(' ', '_').str.replace('(', '').str.replace(')',
                                                                                                                    '')
-            df.to_sql('autos', engine, None, 'replace', True, None, None, None, None)
+            df.to_sql('autos', engine, None, 'append', True, "url", None, None, None)
             print("DataFrame saved in DB")
         except Exception as error:
             print("Error while connecting to sqlite: ", error)

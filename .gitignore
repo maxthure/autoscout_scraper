@@ -4,5 +4,4 @@ venv/lib
 venv/lib64
 venv/out
 venv/pyvenv.cfg
-venv/scraped.sqlite
 .idea

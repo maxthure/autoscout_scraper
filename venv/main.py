@@ -38,6 +38,9 @@ def create_engine_to_db():
 
 
 def get_visited_urls(engine):
+    if not engine.dialect.has_table(engine, "autos"):
+        print("DB existiert noch nicht.")
+        return []
     try:
         connection = engine.connect()
         metadata = sqlalchemy.MetaData()
@@ -58,7 +61,6 @@ def scrape_autoscout(visited_urls):
     countries = {"Deutschland": "D"}
 
     car_counter = 1
-    cycle_counter = 0
     filterset = {"url", "country", "date", "Fahrzeughalter", "HU/AU neu", "Garantie", "Scheckheftgepflegt",
                  "Nichtraucherfahrzeug", "Marke", "Modell", "Angebotsnummer", "Erstzulassung",
                  "Außenfarbe", "Lackierung", "Farbe laut Hersteller", "Innenausstattung", "Karosserieform",
@@ -161,8 +163,6 @@ def scrape_autoscout(visited_urls):
 
     multiple_cars_dict = {}
 
-    cycle_counter += 1
-
     for country in countries:
 
         car_URLs = []
@@ -181,7 +181,7 @@ def scrape_autoscout(visited_urls):
                         car_URLs.append(link.get("href"))
 
                 car_URLs_unique = [car for car in list(set(car_URLs)) if car not in visited_urls]
-                print(f'Lauf {cycle_counter} | {country} | Seite {page} | {len(car_URLs_unique)} neue URLs')
+                print(f'Lauf {make} {model} | {country} | Seite {page} | {len(car_URLs_unique)} neue URLs')
 
             except Exception as e:
                 print("Übersicht: " + str(e) + " " * 50)
@@ -189,7 +189,7 @@ def scrape_autoscout(visited_urls):
 
         if len(car_URLs_unique) > 0:
             for URL in car_URLs_unique:
-                print(f'Lauf {cycle_counter} | {country} | Auto {car_counter}' + ' ' * 50)
+                print(f'Lauf {make} {model} | {country} | Auto {car_counter}' + ' ' * 50)
                 try:
                     car_counter += 1
                     car_dict = {}

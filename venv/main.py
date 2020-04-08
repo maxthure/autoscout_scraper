@@ -58,8 +58,6 @@ def get_visited_urls(engine):
 
 
 def scrape_autoscout(visited_urls):
-    countries = {"Deutschland": "D"}
-
     car_counter = 1
     filterset = {"url", "country", "date", "Fahrzeughalter", "HU/AU neu", "Garantie", "Scheckheftgepflegt",
                  "Nichtraucherfahrzeug", "Marke", "Modell", "Angebotsnummer", "Erstzulassung",
@@ -160,75 +158,79 @@ def scrape_autoscout(visited_urls):
                        "Windschott(für Cabrio)",
                        "Winterreifen"
                        }
+    marken_model_dic = {"Ford": ["Capri", "GT", "Mustang", "RS200"],
+                        "Fiat": ["500", "124", "Panda"],
+                        "Honda": ["Civic", "NSX", "S2000"],
+                        "Nissan": ["GTR", "Silvia", "Skyline"],
+                        "Opel": ["GT", "Manta", "Omega"],
+                        "VW": ["Golf", "T3", "T4", "T5", "T6"]
+                        }
 
     multiple_cars_dict = {}
 
-    for country in countries:
-
-        car_URLs = []
-        car_URLs_unique = []
-        # Suche nach Hersteller + Modell
-        make = 'BMW'
-        model = '120'
-        for page in range(1, 2):
-            try:
-                url = 'https://www.autoscout24.de/lst/' + make + '/' + model + '?sort=age&desc=1&ustate=N%2CU&size=20&page=' \
-                      + str(page) + '&cy=' + countries[country] + '&atype=C&'
-                only_a_tags = SoupStrainer("a")
-                soup = BeautifulSoup(urllib.request.urlopen(url).read(), 'lxml', parse_only=only_a_tags)
-                for link in soup.find_all("a"):
-                    if r"/angebote/" in str(link.get("href")):
-                        car_URLs.append(link.get("href"))
-
-                car_URLs_unique = [car for car in list(set(car_URLs)) if car not in visited_urls]
-                print(f'Lauf {make} {model} | {country} | Seite {page} | {len(car_URLs_unique)} neue URLs')
-
-            except Exception as e:
-                print("Übersicht: " + str(e) + " " * 50)
-                pass
-
-        if len(car_URLs_unique) > 0:
-            for URL in car_URLs_unique:
-                print(f'Lauf {make} {model} | {country} | Auto {car_counter}' + ' ' * 50)
+    for marke in marken_model_dic:
+        for model in marken_model_dic[marke]:
+            car_URLs = []
+            car_URLs_unique = []
+            print(marke+' '+model)
+            for page in range(1, 2):
                 try:
-                    car_counter += 1
-                    car_dict = {}
-                    car_dict["country"] = country
-                    car_dict["date"] = str(datetime.now())
-                    car = BeautifulSoup(urllib.request.urlopen('https://www.autoscout24.de' + URL).read(), 'lxml')
+                    url = 'https://www.autoscout24.de/lst/' + marke + '/' + model + '?sort=age&desc=1&ustate=N%2CU&size=20&page=' \
+                          + str(page) + '&cy=D&atype=C&'
+                    only_a_tags = SoupStrainer("a")
+                    soup = BeautifulSoup(urllib.request.urlopen(url).read(), 'lxml', parse_only=only_a_tags)
+                    for link in soup.find_all("a"):
+                        if r"/angebote/" in str(link.get("href")):
+                            car_URLs.append(link.get("href"))
 
-                    for key, value in zip(car.find_all("dt"), car.find_all("dd")):
-                        # print(key)
-                        if key.text.replace("\n", "") in filterset:
-                            car_dict[key.text.replace("\n", "")] = value.text.replace("\n", "")
-                    car_dict["haendler"] = car.find("div", attrs={"class": "cldt-vendor-contact-box",
-                                                                  "data-vendor-type": "dealer"}) != None
-                    car_dict["ort"] = car.find("div", attrs={"class": "sc-grid-col-12",
-                                                             "data-item-name": "vendor-contact-city"}).text
+                    car_URLs_unique = [car for car in list(set(car_URLs)) if car not in visited_urls]
+                    print(f'Lauf {marke} {model} | Seite {page} | {len(car_URLs_unique)} neue URLs')
 
-                    car_dict["price"] = \
-                        "".join(re.findall(r'[0-9]+', car.find("div", attrs={"class": "cldt-price"}).text))
-
-                    ausstattung = []
-                    for i in car.find_all("div", attrs={
-                        "class": "cldt-equipment-block sc-grid-col-3 sc-grid-col-m-4 sc-grid-col-s-12 sc-pull-left"}):
-                        for span in i.find_all("span"):
-                            ausstattung.append(i.text)
-                    ausstattung2 = []
-                    for element in list(set(ausstattung)):
-                        austattung_liste = element.split("\n")
-                        ausstattung2.extend(austattung_liste)
-                    for ausstattung_element in ausstattungsset:
-                        if ausstattung_element in ausstattung2:
-                            car_dict[ausstattung_element] = True
-                        else:
-                            car_dict[ausstattung_element] = False
-                    multiple_cars_dict[URL] = car_dict
-                    print(car_dict)
                 except Exception as e:
-                    print("Detailseite: " + str(e) + " " * 50)
+                    print("Übersicht: " + str(e) + " " * 50)
                     pass
-            print("")
+
+            if len(car_URLs_unique) > 0:
+                for URL in car_URLs_unique:
+                    print(f'Lauf {marke} {model} | Auto {car_counter}' + ' ' * 50)
+                    try:
+                        car_counter += 1
+                        car_dict = {}
+                        car_dict["country"] = "Deutschland"
+                        car_dict["date"] = str(datetime.now())
+                        car = BeautifulSoup(urllib.request.urlopen('https://www.autoscout24.de' + URL).read(), 'lxml')
+
+                        for key, value in zip(car.find_all("dt"), car.find_all("dd")):
+                            # print(key)
+                            if key.text.replace("\n", "") in filterset:
+                                car_dict[key.text.replace("\n", "")] = value.text.replace("\n", "")
+                        car_dict["haendler"] = car.find("div", attrs={"class": "cldt-vendor-contact-box",
+                                                                      "data-vendor-type": "dealer"}) != None
+                        car_dict["ort"] = car.find("div", attrs={"class": "sc-grid-col-12",
+                                                                 "data-item-name": "vendor-contact-city"}).text
+
+                        car_dict["price"] = \
+                            int("".join(re.findall(r'[0-9]+', car.find("div", attrs={"class": "cldt-price"}).text)))
+
+                        ausstattung = []
+                        for i in car.find_all("div", attrs={
+                            "class": "cldt-equipment-block sc-grid-col-3 sc-grid-col-m-4 sc-grid-col-s-12 sc-pull-left"}):
+                            for span in i.find_all("span"):
+                                ausstattung.append(i.text)
+                        ausstattung2 = []
+                        for element in list(set(ausstattung)):
+                            austattung_liste = element.split("\n")
+                            ausstattung2.extend(austattung_liste)
+                        for ausstattung_element in ausstattungsset:
+                            if ausstattung_element in ausstattung2:
+                                car_dict[ausstattung_element] = True
+                            else:
+                                car_dict[ausstattung_element] = False
+                        multiple_cars_dict[URL] = car_dict
+                        print(car_dict)
+                    except Exception as e:
+                        print("Detailseite: " + str(e) + " " * 50)
+                        pass
 
     return multiple_cars_dict
 

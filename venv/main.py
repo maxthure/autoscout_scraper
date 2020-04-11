@@ -11,62 +11,14 @@ import sqlalchemy
 
 car_folder = Path("out/data/autos/")
 path_to_visited_urls = "out/data/visited/visited_urls.json"
-
-
-def main():
-    create_folder()
-    engine = create_engine_to_db()
-    visited_urls = get_visited_urls(engine)
-    multiple_cars_dict = scrape_autoscout(visited_urls)
-    save_cars(multiple_cars_dict, engine)
-
-
-def create_folder():
-    if not os.path.isdir(car_folder):
-        os.makedirs(car_folder)
-        print(car_folder, "erstellt.")
-    else:
-        print(car_folder, "existiert bereits")
-
-
-def create_engine_to_db():
-    try:
-        engine = sqlalchemy.create_engine('sqlite:///scraped.sqlite')
-        return engine
-    except Exception as error:
-        print("Error while connecting to sqlite: ", error)
-
-
-def get_visited_urls(engine):
-    if not engine.dialect.has_table(engine, "autos"):
-        print("DB existiert noch nicht.")
-        return []
-    try:
-        connection = engine.connect()
-        metadata = sqlalchemy.MetaData()
-        autos = sqlalchemy.Table('autos', metadata, autoload=True, autoload_with=engine)
-        query = sqlalchemy.select([autos.columns.url])
-        result_proxy = connection.execute(query)
-        result_set = result_proxy.fetchall()
-        visited_urls = [r[0] for r in result_set]
-        print(f'Länge der Liste besuchter URLs: {len(visited_urls)}')
-        return visited_urls
-    except Exception as error:
-        print("Error while connecting to sqlite: ", error)
-    finally:
-        connection.close()
-
-
-def scrape_autoscout(visited_urls):
-    car_counter = 1
-    filterset = {"url", "country", "date", "Fahrzeughalter", "HU/AU neu", "Garantie", "Scheckheftgepflegt",
+filterset = {"url", "country", "date", "Fahrzeughalter", "HU/AU neu", "Garantie", "Scheckheftgepflegt",
                  "Nichtraucherfahrzeug", "Marke", "Modell", "Angebotsnummer", "Erstzulassung",
                  "Außenfarbe", "Lackierung", "Farbe laut Hersteller", "Innenausstattung", "Karosserieform",
                  "Anzahl Türen", "Sitzplätze",
                  "Schlüsselnummer", "Getriebeart", "Hubraum", "Anstriebsart", "Kraftstoff", "Schadstoffklasse",
                  "Feinstaubplakette", "Leistung",
                  "Kilometerstand", "Getriebe", "Kraftstoffverbr.*", "Ausstattung", "ort", "price", "HU Prüfung"}
-    ausstattungsset = {"ABS",
+ausstattungsset = {"ABS",
                        "Airbag hinten",
                        "Alarmanlage",
                        "Beifahrerairbag",
@@ -158,6 +110,122 @@ def scrape_autoscout(visited_urls):
                        "Windschott(für Cabrio)",
                        "Winterreifen"
                        }
+
+
+def main():
+    create_folder()
+    engine = create_engine_to_db()
+    visited_urls = get_visited_urls(engine)
+    multiple_cars_dict = check_for_deleted_cars(engine, visited_urls)
+    multiple_cars_dict = scrape_autoscout(visited_urls, multiple_cars_dict)
+    save_cars(multiple_cars_dict, engine)
+
+
+def create_folder():
+    if not os.path.isdir(car_folder):
+        os.makedirs(car_folder)
+        print(car_folder, "erstellt.")
+    else:
+        print(car_folder, "existiert bereits")
+
+
+def create_engine_to_db():
+    try:
+        engine = sqlalchemy.create_engine('sqlite:///scraped.sqlite')
+        return engine
+    except Exception as error:
+        print("Error while connecting to sqlite: ", error)
+
+
+def get_visited_urls(engine):
+    if not engine.dialect.has_table(engine, "autos"):
+        print("DB existiert noch nicht.")
+        return []
+    try:
+        connection = engine.connect()
+        metadata = sqlalchemy.MetaData()
+        autos = sqlalchemy.Table('autos', metadata, autoload=True, autoload_with=engine)
+        query = sqlalchemy.select([autos.columns.url.distinct()]).where(autos.columns.deleted == False)
+        result_proxy = connection.execute(query)
+        result_set = result_proxy.fetchall()
+        visited_urls = [r[0] for r in result_set]
+        print(f'Länge der Liste besuchter URLs: {len(visited_urls)}')
+        return visited_urls
+    except Exception as error:
+        print("Error while connecting to sqlite: ", error)
+    finally:
+        connection.close()
+
+
+def check_for_deleted_cars(engine, visited_urls):
+    car_counter = 1
+    deleted_urls = []
+    multiple_cars_dict = {}
+
+    for URL in visited_urls:
+        print(f'Gelöschte Checken | Auto {car_counter}' + ' ' * 50)
+        try:
+            car_counter += 1
+            car_dict = {}
+            car_dict["country"] = "Deutschland"
+            car_dict["date"] = str(datetime.now())
+            car = BeautifulSoup(urllib.request.urlopen('https://www.autoscout24.de' + URL).read(), 'lxml')
+
+            for key, value in zip(car.find_all("dt"), car.find_all("dd")):
+                # print(key)
+                if key.text.replace("\n", "") in filterset:
+                    car_dict[key.text.replace("\n", "")] = value.text.replace("\n", "")
+            car_dict["haendler"] = car.find("div", attrs={"class": "cldt-vendor-contact-box",
+                                                          "data-vendor-type": "dealer"}) != None
+            car_dict["ort"] = car.find("div", attrs={"class": "sc-grid-col-12",
+                                                     "data-item-name": "vendor-contact-city"}).text
+
+            car_dict["price"] = \
+                int("".join(re.findall(r'[0-9]+', car.find("div", attrs={"class": "cldt-price"}).text)))
+
+            ausstattung = []
+            for i in car.find_all("div", attrs={
+                "class": "cldt-equipment-block sc-grid-col-3 sc-grid-col-m-4 sc-grid-col-s-12 sc-pull-left"}):
+                for span in i.find_all("span"):
+                    ausstattung.append(i.text)
+            ausstattung2 = []
+            for element in list(set(ausstattung)):
+                austattung_liste = element.split("\n")
+                ausstattung2.extend(austattung_liste)
+            for ausstattung_element in ausstattungsset:
+                if ausstattung_element in ausstattung2:
+                    car_dict[ausstattung_element] = True
+                else:
+                    car_dict[ausstattung_element] = False
+
+            car_dict["deleted"] = False
+
+            multiple_cars_dict[URL] = car_dict
+        except Exception as e:
+            if (str(e) == "HTTP Error 404: Not Found"):
+                deleted_urls.append(URL)
+            print("Detailseite: " + str(e) + " " * 50)
+            pass
+
+    try:
+        connection = engine.connect()
+        metadata = sqlalchemy.MetaData()
+        autos = sqlalchemy.Table('autos', metadata, autoload=True, autoload_with=engine)
+        for url in deleted_urls:
+            query = sqlalchemy.update(autos).values(deleted=True).where(autos.columns.url == url)
+            connection.execute(query)
+    except Exception as error:
+        print("Error while connecting to sqlite: ", error)
+    finally:
+        connection.close()
+
+    print(deleted_urls)
+    return multiple_cars_dict
+
+
+def scrape_autoscout(visited_urls, multiple_cars_dict):
+    car_counter = 1
+
     marken_model_dic = {"Ford": ["Capri", "GT", "Mustang", "RS200"],
                         "Fiat": ["500", "124", "Panda"],
                         "Honda": ["Civic", "NSX", "S2000"],
@@ -165,11 +233,11 @@ def scrape_autoscout(visited_urls):
                         "Opel": ["GT", "Manta", "Omega"],
                         "VW": ["Golf", "T3", "T4", "T5", "T6"]
                         }
+    #für Testzwecke
+    marken_model_dic_test = {"BMW":["120"]}
 
-    multiple_cars_dict = {}
-
-    for marke in marken_model_dic:
-        for model in marken_model_dic[marke]:
+    for marke in marken_model_dic_test:
+        for model in marken_model_dic_test[marke]:
             car_URLs = []
             car_URLs_unique = []
             print(marke+' '+model)
@@ -226,8 +294,10 @@ def scrape_autoscout(visited_urls):
                                 car_dict[ausstattung_element] = True
                             else:
                                 car_dict[ausstattung_element] = False
+
+                        car_dict["deleted"] = False
+
                         multiple_cars_dict[URL] = car_dict
-                        print(car_dict)
                     except Exception as e:
                         print("Detailseite: " + str(e) + " " * 50)
                         pass

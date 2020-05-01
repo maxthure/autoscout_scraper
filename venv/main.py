@@ -9,8 +9,8 @@ import pandas as pd  # Datenanalyse und -manipulation
 from pathlib import Path
 import sqlalchemy
 
-# car_folder = Path("out/data/autos/")
-car_folder = Path("/media/thure/INTENSO/Scraper/data/autos")
+car_folder = Path("out/data/autos/")
+#car_folder = Path("/media/thure/INTENSO/Scraper/data/autos")
 filterset = {"url", "country", "date", "Fahrzeughalter", "HU/AU neu", "Garantie", "Scheckheftgepflegt",
              "Nichtraucherfahrzeug", "Marke", "Modell", "Angebotsnummer", "Erstzulassung", "Außenfarbe", "Lackierung",
              "Innenausstattung", "Karosserieform", "Anzahl Türen", "Sitzplätze", "Getriebeart", "Hubraum", "Kraftstoff",
@@ -146,7 +146,8 @@ def create_folder():
 
 def create_engine_to_db():
     try:
-        engine = sqlalchemy.create_engine('sqlite:////media/thure/INTENSO/Scraper/data/scraped.sqlite')
+        #engine = sqlalchemy.create_engine('sqlite:////media/thure/INTENSO/Scraper/data/scraped.sqlite')
+        engine = sqlalchemy.create_engine('sqlite:///out/data/scraped.sqlite')
         return engine
     except Exception as error:
         print("Error while connecting to sqlite: ", error)
@@ -390,7 +391,7 @@ def scrape_autoscout(visited_urls, multiple_cars_dict):
                         car_counter += 1
                         car_dict = {}
                         car_dict["country"] = "Deutschland"
-                        car_dict["date"] = str(datetime.now())
+                        #car_dict["date"] = str(datetime.now())
                         car = BeautifulSoup(urllib.request.urlopen('https://www.autoscout24.de' + URL).read(), 'lxml')
 
                         for key, value in zip(car.find_all("dt"), car.find_all("dd")):

@@ -9,30 +9,13 @@ import pandas as pd  # Datenanalyse und -manipulation
 from pathlib import Path
 import sqlalchemy
 
-car_folder = Path("out/data/autos/")
-#car_folder = Path("/media/thure/INTENSO/Scraper/data/autos")
-filterset = {"url", "country", "date", "Fahrzeughalter", "HU/AU neu", "Garantie", "Scheckheftgepflegt",
+# car_folder = Path("out/data/autos/")
+car_folder = Path("/media/thure/INTENSO/Scraper/data/autos")
+filterset = {"url", "country", "date", "Fahrzeughalter", "HU/AU neu", "Garantie",
              "Nichtraucherfahrzeug", "Marke", "Modell", "Angebotsnummer", "Erstzulassung", "Außenfarbe", "Lackierung",
              "Innenausstattung", "Karosserieform", "Anzahl Türen", "Sitzplätze", "Getriebeart", "Hubraum", "Kraftstoff",
              "Schadstoffklasse", "Feinstaubplakette", "Leistung", "Kilometerstand", "Getriebe", "Kraftstoffverbr.*",
-             "Ausstattung", "haendler", "ort", "price", "Winterreifen", "Einparkhilfe selbstlenkendes System", "TV",
-             "Navigationssystem", "Sitzheizung", "Einparkhilfe Sensoren hinten", "Fahrerairbag", "teilb. Rücksitzbank",
-             "Notrufsystem", "Start/Stop-Automatik", "Verkehrszeichenerkennung", "Lichtsensor", "Beheizbares Lenkrad",
-             "Dachreling", "Get√∂nte;Zentralverriegelung mit Funkfernbedienung", "ESP", "Head-up display",
-             "Wegfahrsperre", "Totwinkel-Assistent", "LED-Scheinwerfer", "Schlüssellose Zentralverriegelung",
-             "Klimaanlage", "Luftfederung", "Sportsitze", "Tagfahrlicht", "Massagesitze", "ABS", "Skisack", "Armlehne",
-             "Kurvenlicht", "Alarmanlage", "Einparkhilfe Kamera", "Beifahrerairbag", "Klimaautomatik",
-             "Behindertengerecht", "Schaltwippen", "Tempomat", "Isofix", "Nebelscheinwerfer", "Traktionskontrolle",
-             "Tuning", "Notbremsassistent", "Rechtslenker", "Windschott(für Cabrio)", "Beheizbare Frontscheibe",
-             "Regensensor", "Radio", "LED-Tagfahrlicht", "MP3", "Lordosenstütze", "Standheizung", "Schiebedach",
-             "Bordcomputer", "Scheiben", "Sprachsteuerung", "Lederlenkrad", "Schiebetür;Einparkhilfe Sensoren vorne",
-             "Sportfahrwerk", "Reifendruckkontrollsystem", "Berganfahrassistent", "Elektrische Seitenspiegel",
-             "Seitenairbag", "USB", "Katalysator", "Kopfairbag", "Elektr. Fensterheber", "Zentralverriegelung",
-             "Müdigkeitswarnsystem", "Nachtsicht-Assistent", "Xenonscheinwerfer", "Servolenkung", "Elektrische Sitze",
-             "Elektrische Heckklappe", "Sportpaket", "Multifunktionslenkrad", "Bluetooth", "DAB-Radio", "Panoramadach",
-             "Anhängerkupplung", "Freisprecheinrichtung", "Abstandstempomat", "Spurhalteassistent", "Sitzbelüftung",
-             "Touchscreen", "Alufelgen", "Airbag hinten", "CD", "Soundsystem", "HU Prüfung", "Schlüsselnummer",
-             "Farbe laut Hersteller"}
+             "Ausstattung", "haendler", "ort", "price", "HU Prüfung", "Farbe laut Hersteller"}
 ausstattungsset = {"ABS",
                    "Airbag hinten",
                    "Alarmanlage",
@@ -130,10 +113,7 @@ ausstattungsset = {"ABS",
 def main():
     create_folder()
     engine = create_engine_to_db()
-    visited_urls = get_visited_urls(engine)
-    multiple_cars_dict = check_for_deleted_cars(engine, visited_urls)
-    multiple_cars_dict = scrape_autoscout(visited_urls, multiple_cars_dict)
-    save_cars(multiple_cars_dict, engine)
+    scrape_autoscout(engine)
 
 
 def create_folder():
@@ -153,7 +133,7 @@ def create_engine_to_db():
         print("Error while connecting to sqlite: ", error)
 
 
-def get_visited_urls(engine):
+def get_visited_urls(engine, marke):
     if not engine.dialect.has_table(engine, "autos"):
         print("DB existiert noch nicht.")
         return []
@@ -161,7 +141,7 @@ def get_visited_urls(engine):
         connection = engine.connect()
         metadata = sqlalchemy.MetaData()
         autos = sqlalchemy.Table('autos', metadata, autoload=True, autoload_with=engine)
-        query = sqlalchemy.select([autos.columns.url.distinct()]).where(autos.columns.deleted == False)
+        query = sqlalchemy.select([autos.columns.url.distinct()]).where(sqlalchemy.and_(autos.columns.deleted == False, sqlalchemy.func.lower(autos.columns.marke) == marke.replace('-',' ')))
         result_proxy = connection.execute(query)
         result_set = result_proxy.fetchall()
         visited_urls = [r[0] for r in result_set]
@@ -239,7 +219,7 @@ def check_for_deleted_cars(engine, visited_urls):
     return multiple_cars_dict
 
 
-def scrape_autoscout(visited_urls, multiple_cars_dict):
+def scrape_autoscout(engine):
     car_counter = 1
 
     marken_model_dic = {"ac": ["cobra"],
@@ -259,7 +239,7 @@ def scrape_autoscout(visited_urls, multiple_cars_dict):
                         "ferrari": ["195", "206", "208", "246", "250", "275", "288", "308", "328", "330", "348", "360",
                                     "365", "400", "412", "430-scuderia", "456", "458", "488", "512", "550", "575",
                                     "599", "612", "750", "812", "california", "daytona", "dino-gt4", "enzo-ferrari",
-                                    "f12", "f355", "f40", "f430", "", "f50", "f512", "f8-spider", "f8-tributo", "ff",
+                                    "f12", "f355", "f40", "f430", "f50", "f512", "f8-spider", "f8-tributo", "ff",
                                     "fxx", "gtc4-lusso", "laferrari", "mondial", "monza", "portofino", "roma",
                                     "scuderia-spider-16m", "sf90-stradale", "superamerica", "superamerica",
                                     "testarossa"],
@@ -298,6 +278,9 @@ def scrape_autoscout(visited_urls, multiple_cars_dict):
     marken_model_dic_test = {"BMW": ["120"]}
 
     for marke in marken_model_dic:
+        visited_urls = get_visited_urls(engine, marke)
+        multiple_cars_dict = {} #check_for_deleted_cars(engine, visited_urls)
+
         if len(marken_model_dic[marke]) == 0:
             car_URLs = []
             car_URLs_unique = []
@@ -313,7 +296,7 @@ def scrape_autoscout(visited_urls, multiple_cars_dict):
                             car_URLs.append(link.get("href"))
 
                     car_URLs_unique = [car for car in list(set(car_URLs)) if car not in visited_urls]
-                    print(f'Lauf {marke} {model} | Seite {page} | {len(car_URLs_unique)} neue URLs')
+                    print(f'Lauf {marke} | Seite {page} | {len(car_URLs_unique)} neue URLs')
 
                 except Exception as e:
                     print("Übersicht: " + str(e) + " " * 50)
@@ -321,7 +304,7 @@ def scrape_autoscout(visited_urls, multiple_cars_dict):
 
             if len(car_URLs_unique) > 0:
                 for URL in car_URLs_unique:
-                    print(f'Lauf {marke} {model} | Auto {car_counter}' + ' ' * 50)
+                    print(f'Lauf {marke} | Auto {car_counter}' + ' ' * 50)
                     try:
                         car_counter += 1
                         car_dict = {}
@@ -428,13 +411,13 @@ def scrape_autoscout(visited_urls, multiple_cars_dict):
                         print("Detailseite: " + str(e) + " " * 50)
                         pass
 
-    return multiple_cars_dict
+        save_cars(marke, multiple_cars_dict, engine)
 
 
-def save_cars(multiple_cars_dict, engine):
+def save_cars(marke, multiple_cars_dict, engine):
     if len(multiple_cars_dict) > 0:
         df = pd.DataFrame(multiple_cars_dict).T
-        df.to_csv(str(car_folder) + "/" + re.sub("[.,:,-, ]", "_", str(datetime.now())) + ".csv", sep=";",
+        df.to_csv(str(car_folder) + "/" + marke + ".csv", sep=";",
                   index_label="url")
         try:
             df.columns = df.columns.str.strip().str.lower().str.replace(' ', '_').str.replace('(', '').str.replace(')',

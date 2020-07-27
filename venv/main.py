@@ -9,10 +9,10 @@ import pandas as pd  # Datenanalyse und -manipulation
 from pathlib import Path
 import sqlalchemy
 
-# car_folder = Path("out/data/autos/")
-car_folder = Path("/media/thure/INTENSO/Scraper/data/autos")
-filterset = {"url", "country", "date", "Fahrzeughalter", "HU/AU neu", "Garantie",
-             "Nichtraucherfahrzeug", "Marke", "Modell", "Angebotsnummer", "Erstzulassung", "Außenfarbe", "Lackierung",
+car_folder = Path("out/data/autos/")
+# car_folder = Path("/media/thure/INTENSO/Scraper/data/autos")
+filterset = {"country", "Fahrzeughalter", "HU/AU neu", "Garantie", "Scheckheftgepflegt",
+             "Nichtraucherfahrzeug", "Marke", "Modell", "Erstzulassung", "Außenfarbe", "Lackierung",
              "Innenausstattung", "Karosserieform", "Anzahl Türen", "Sitzplätze", "Getriebeart", "Hubraum", "Kraftstoff",
              "Schadstoffklasse", "Feinstaubplakette", "Leistung", "Kilometerstand", "Getriebe", "Kraftstoffverbr.*",
              "Ausstattung", "haendler", "ort", "price", "HU Prüfung", "Farbe laut Hersteller"}
@@ -126,22 +126,27 @@ def create_folder():
 
 def create_engine_to_db():
     try:
-        #engine = sqlalchemy.create_engine('sqlite:////media/thure/INTENSO/Scraper/data/scraped.sqlite')
+        # engine = sqlalchemy.create_engine('sqlite:////media/thure/INTENSO/Scraper/data/scraped.sqlite')
         engine = sqlalchemy.create_engine('sqlite:///out/data/scraped.sqlite')
         return engine
     except Exception as error:
         print("Error while connecting to sqlite: ", error)
 
 
-def get_visited_urls(engine, marke):
+def get_visited_urls(marke):
+    # TODO immer manuell ändern
+    engine = sqlalchemy.create_engine('sqlite:///out/data_20/scraped.sqlite')
     if not engine.dialect.has_table(engine, "autos"):
-        print("DB existiert noch nicht.")
+        print("Alte DB existiert noch keine.")
         return []
     try:
         connection = engine.connect()
         metadata = sqlalchemy.MetaData()
         autos = sqlalchemy.Table('autos', metadata, autoload=True, autoload_with=engine)
-        query = sqlalchemy.select([autos.columns.url.distinct()]).where(sqlalchemy.and_(autos.columns.deleted == False, sqlalchemy.func.lower(autos.columns.marke) == marke.replace('-',' ')))
+        query = sqlalchemy.select([autos.columns.url.distinct()]).where(sqlalchemy.and_(autos.columns.deleted == False,
+                                                                                        sqlalchemy.func.lower(
+                                                                                            autos.columns.marke) == marke.replace(
+                                                                                            '-', ' ')))
         result_proxy = connection.execute(query)
         result_set = result_proxy.fetchall()
         visited_urls = [r[0] for r in result_set]
@@ -153,7 +158,7 @@ def get_visited_urls(engine, marke):
         connection.close()
 
 
-def check_for_deleted_cars(engine, visited_urls):
+def check_for_deleted_cars(visited_urls):
     car_counter = 1
     deleted_urls = []
     multiple_cars_dict = {}
@@ -163,8 +168,10 @@ def check_for_deleted_cars(engine, visited_urls):
         try:
             car_counter += 1
             car_dict = {}
+            for filterz in filterset:
+                car_dict[filterz] = None
             car_dict["country"] = "Deutschland"
-            car_dict["date"] = str(datetime.now())
+            # car_dict["date"] = str(datetime.now())
             car = BeautifulSoup(urllib.request.urlopen('https://www.autoscout24.de' + URL).read(), 'lxml')
 
             for key, value in zip(car.find_all("dt"), car.find_all("dd")):
@@ -195,25 +202,30 @@ def check_for_deleted_cars(engine, visited_urls):
                     car_dict[ausstattung_element] = False
 
             car_dict["deleted"] = False
+            if car_dict.get("Kilometerstand") is None:
+                km = car.find_all('span', {'class': 'sc-font-l cldt-stage-primary-keyfact'})
+                for v in km:
+                    if 'km' in v.text:
+                        text = v.text.replace(" km", '').replace('.', '')
+                        if (represents_int(text)):
+                            car_dict["Kilometerstand"] = int(text)
+                    if 'kW' in v.text:
+                        text = v.text.replace(" kW", '').replace('.', '')
+                        if (represents_int(text)):
+                            car_dict["Leistung"] = int(text)
 
             multiple_cars_dict[URL] = car_dict
         except Exception as e:
-            if (str(e) == "HTTP Error 404: Not Found"):
+            if (str(e) == "HTTP Error 404: Not Found" or str(e) == "HTTP Error 410: Gone"):
                 deleted_urls.append(URL)
             print("Detailseite: " + str(e) + " " * 50)
             pass
 
-    try:
-        connection = engine.connect()
-        metadata = sqlalchemy.MetaData()
-        autos = sqlalchemy.Table('autos', metadata, autoload=True, autoload_with=engine)
         for url in deleted_urls:
-            query = sqlalchemy.update(autos).values(deleted=True).where(autos.columns.url == url)
-            connection.execute(query)
-    except Exception as error:
-        print("Error while connecting to sqlite: ", error)
-    finally:
-        connection.close()
+            car_dict = {"deleted": True}
+            for filterz in filterset:
+                car_dict[filterz] = None
+            multiple_cars_dict[url] = car_dict
 
     print(deleted_urls)
     return multiple_cars_dict
@@ -256,7 +268,7 @@ def scrape_autoscout(engine):
                                        "range-rover-sport", "range-rover-velar"],
                         "lotus": [],
                         "maserati": [],
-                        "mazda": ["rx7", "rx8"],
+                        "mazda": ["rx-7", "rx-8"],
                         "mclaren": [],
                         "mercedes-benz": ["190", "c-klasse-(alle)", "cl-(alle)", "clk-(alle)", "cls-(alle)",
                                           "e-klasse-(alle)", "g-klasse-(alle)", "s-klasse-(alle)", "sl-(alle)",
@@ -272,14 +284,14 @@ def scrape_autoscout(engine):
                         "renault": ["alpine-a110", "alpine-a310", "r5"],
                         "rolls-royce": [],
                         "ruf": [],
-                        "tvr": [],
-                        "wiessmann": []}
+                        "tvr": []}
     # für Testzwecke
-    marken_model_dic_test = {"BMW": ["120"]}
+    #marken_model_dic =
 
     for marke in marken_model_dic:
-        visited_urls = get_visited_urls(engine, marke)
-        multiple_cars_dict = {} #check_for_deleted_cars(engine, visited_urls)
+        visited_urls = get_visited_urls(marke)
+        # TODO
+        multiple_cars_dict = check_for_deleted_cars(visited_urls)
 
         if len(marken_model_dic[marke]) == 0:
             car_URLs = []
@@ -304,12 +316,14 @@ def scrape_autoscout(engine):
 
             if len(car_URLs_unique) > 0:
                 for URL in car_URLs_unique:
-                    print(f'Lauf {marke} | Auto {car_counter}' + ' ' * 50)
+                    print(f'Lauf {marke} | Auto {car_counter} | URL {URL}' + ' ' * 50)
                     try:
                         car_counter += 1
                         car_dict = {}
+                        for filterz in filterset:
+                            car_dict[filterz] = None
                         car_dict["country"] = "Deutschland"
-                        car_dict["date"] = str(datetime.now())
+                        # car_dict["date"] = str(datetime.now())
                         car = BeautifulSoup(urllib.request.urlopen('https://www.autoscout24.de' + URL).read(), 'lxml')
 
                         for key, value in zip(car.find_all("dt"), car.find_all("dd")):
@@ -340,6 +354,17 @@ def scrape_autoscout(engine):
                                 car_dict[ausstattung_element] = False
 
                         car_dict["deleted"] = False
+                        if car_dict.get("Kilometerstand") is None:
+                            km = car.find_all('span', {'class': 'sc-font-l cldt-stage-primary-keyfact'})
+                            for v in km:
+                                if 'km' in v.text:
+                                    text = v.text.replace(" km", '').replace('.', '')
+                                    if (represents_int(text)):
+                                        car_dict["Kilometerstand"] = int(text)
+                                if 'kW' in v.text:
+                                    text = v.text.replace(" kW", '').replace('.', '')
+                                    if (represents_int(text)):
+                                        car_dict["Leistung"] = int(text)
 
                         multiple_cars_dict[URL] = car_dict
                     except Exception as e:
@@ -369,16 +394,18 @@ def scrape_autoscout(engine):
 
             if len(car_URLs_unique) > 0:
                 for URL in car_URLs_unique:
-                    print(f'Lauf {marke} {model} | Auto {car_counter}' + ' ' * 50)
+                    print(f'Lauf {marke} {model} | Auto {car_counter} | URL {URL}' + ' ' * 50)
                     try:
                         car_counter += 1
                         car_dict = {}
+                        for filterz in filterset:
+                            car_dict[filterz] = None
                         car_dict["country"] = "Deutschland"
-                        #car_dict["date"] = str(datetime.now())
+                        # car_dict["date"] = str(datetime.now())
                         car = BeautifulSoup(urllib.request.urlopen('https://www.autoscout24.de' + URL).read(), 'lxml')
 
                         for key, value in zip(car.find_all("dt"), car.find_all("dd")):
-                            # print(key)
+                            #print(key)
                             if key.text.replace("\n", "") in filterset:
                                 car_dict[key.text.replace("\n", "")] = value.text.replace("\n", "")
                         car_dict["haendler"] = car.find("div", attrs={"class": "cldt-vendor-contact-box",
@@ -406,6 +433,18 @@ def scrape_autoscout(engine):
 
                         car_dict["deleted"] = False
 
+                        if car_dict.get("Kilometerstand") is None:
+                            km = car.find_all('span', {'class': 'sc-font-l cldt-stage-primary-keyfact'})
+                            for v in km:
+                                if 'km' in v.text:
+                                    text = v.text.replace(" km", '').replace('.', '')
+                                    if (represents_int(text)):
+                                        car_dict["Kilometerstand"] = int(text)
+                                if 'kW' in v.text:
+                                    text = v.text.replace(" kW", '').replace('.', '')
+                                    if (represents_int(text)):
+                                        car_dict["Leistung"] = int(text)
+
                         multiple_cars_dict[URL] = car_dict
                     except Exception as e:
                         print("Detailseite: " + str(e) + " " * 50)
@@ -417,6 +456,8 @@ def scrape_autoscout(engine):
 def save_cars(marke, multiple_cars_dict, engine):
     if len(multiple_cars_dict) > 0:
         df = pd.DataFrame(multiple_cars_dict).T
+        df.columns = df.columns.str.strip().str.lower().str.replace(' ', '_').str.replace('(', '').str.replace(')',
+                                                                                                               '')
         df.to_csv(str(car_folder) + "/" + marke + ".csv", sep=";",
                   index_label="url")
         try:
@@ -429,6 +470,16 @@ def save_cars(marke, multiple_cars_dict, engine):
 
     else:
         print("Keine Daten")
+
+
+def represents_int(s):
+    if s is None:
+        return False
+    try:
+        int(s)
+        return True
+    except Exception:
+        return False
 
 
 if __name__ == "__main__":

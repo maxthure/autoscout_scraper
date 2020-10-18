@@ -135,7 +135,7 @@ def create_engine_to_db():
 
 def get_visited_urls(marke):
     # TODO immer manuell ändern
-    engine = sqlalchemy.create_engine('sqlite:///out/data_20/scraped.sqlite')
+    engine = sqlalchemy.create_engine('sqlite:///out/data_old/scraped.sqlite')
     if not engine.dialect.has_table(engine, "autos"):
         print("Alte DB existiert noch keine.")
         return []
@@ -145,7 +145,7 @@ def get_visited_urls(marke):
         autos = sqlalchemy.Table('autos', metadata, autoload=True, autoload_with=engine)
         query = sqlalchemy.select([autos.columns.url.distinct()]).where(sqlalchemy.and_(autos.columns.deleted == False,
                                                                                         sqlalchemy.func.lower(
-                                                                                            autos.columns.marke) == marke.replace(
+                                                                                            sqlalchemy.func.replace(autos.columns.marke,'-', ' ')) == marke.replace(
                                                                                             '-', ' ')))
         result_proxy = connection.execute(query)
         result_set = result_proxy.fetchall()
@@ -202,17 +202,16 @@ def check_for_deleted_cars(visited_urls):
                     car_dict[ausstattung_element] = False
 
             car_dict["deleted"] = False
-            if car_dict.get("Kilometerstand") is None:
-                km = car.find_all('span', {'class': 'sc-font-l cldt-stage-primary-keyfact'})
-                for v in km:
-                    if 'km' in v.text:
-                        text = v.text.replace(" km", '').replace('.', '')
-                        if (represents_int(text)):
-                            car_dict["Kilometerstand"] = int(text)
-                    if 'kW' in v.text:
-                        text = v.text.replace(" kW", '').replace('.', '')
-                        if (represents_int(text)):
-                            car_dict["Leistung"] = int(text)
+            km = car.find_all('span', {'class': 'sc-font-l cldt-stage-primary-keyfact'})
+            for v in km:
+                if 'km' in v.text:
+                    text = v.text.replace(" km", '').replace('.', '')
+                    if (represents_int(text)):
+                        car_dict["Kilometerstand"] = int(text)
+                if 'kW' in v.text:
+                    text = v.text.replace(" kW", '').replace('.', '')
+                    if (represents_int(text)):
+                        car_dict["Leistung"] = int(text)
 
             multiple_cars_dict[URL] = car_dict
         except Exception as e:
@@ -286,7 +285,8 @@ def scrape_autoscout(engine):
                         "ruf": [],
                         "tvr": []}
     # für Testzwecke
-    #marken_model_dic =
+
+    #marken_model_dic = {
 
     for marke in marken_model_dic:
         visited_urls = get_visited_urls(marke)
@@ -354,17 +354,16 @@ def scrape_autoscout(engine):
                                 car_dict[ausstattung_element] = False
 
                         car_dict["deleted"] = False
-                        if car_dict.get("Kilometerstand") is None:
-                            km = car.find_all('span', {'class': 'sc-font-l cldt-stage-primary-keyfact'})
-                            for v in km:
-                                if 'km' in v.text:
-                                    text = v.text.replace(" km", '').replace('.', '')
-                                    if (represents_int(text)):
-                                        car_dict["Kilometerstand"] = int(text)
-                                if 'kW' in v.text:
-                                    text = v.text.replace(" kW", '').replace('.', '')
-                                    if (represents_int(text)):
-                                        car_dict["Leistung"] = int(text)
+                        km = car.find_all('span', {'class': 'sc-font-l cldt-stage-primary-keyfact'})
+                        for v in km:
+                            if 'km' in v.text:
+                                text = v.text.replace(" km", '').replace('.', '')
+                                if (represents_int(text)):
+                                    car_dict["Kilometerstand"] = int(text)
+                            if 'kW' in v.text:
+                                text = v.text.replace(" kW", '').replace('.', '')
+                                if (represents_int(text)):
+                                    car_dict["Leistung"] = int(text)
 
                         multiple_cars_dict[URL] = car_dict
                     except Exception as e:
@@ -433,17 +432,16 @@ def scrape_autoscout(engine):
 
                         car_dict["deleted"] = False
 
-                        if car_dict.get("Kilometerstand") is None:
-                            km = car.find_all('span', {'class': 'sc-font-l cldt-stage-primary-keyfact'})
-                            for v in km:
-                                if 'km' in v.text:
-                                    text = v.text.replace(" km", '').replace('.', '')
-                                    if (represents_int(text)):
-                                        car_dict["Kilometerstand"] = int(text)
-                                if 'kW' in v.text:
-                                    text = v.text.replace(" kW", '').replace('.', '')
-                                    if (represents_int(text)):
-                                        car_dict["Leistung"] = int(text)
+                        km = car.find_all('span', {'class': 'sc-font-l cldt-stage-primary-keyfact'})
+                        for v in km:
+                            if 'km' in v.text:
+                                text = v.text.replace(" km", '').replace('.', '')
+                                if (represents_int(text)):
+                                    car_dict["Kilometerstand"] = int(text)
+                            if 'kW' in v.text:
+                                text = v.text.replace(" kW", '').replace('.', '')
+                                if (represents_int(text)):
+                                    car_dict["Leistung"] = int(text)
 
                         multiple_cars_dict[URL] = car_dict
                     except Exception as e:
